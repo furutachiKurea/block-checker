@@ -20,6 +20,9 @@ func main() {
 	// 创建 Echo 实例
 	e := echo.New()
 
+	// 配置静态文件服务
+	e.Static("/static", "static")
+
 	// 注册路由
 	e.GET("/", handlers.HomeHandler)
 	e.GET("/healthz", handlers.HealthHandler)
