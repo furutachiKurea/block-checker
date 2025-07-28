@@ -1,1 +1,1 @@
-web: bin/db-checker 
+web: bin/block-checker 

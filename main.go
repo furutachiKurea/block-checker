@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/furutachiKurea/block-checker/config"
 	"github.com/furutachiKurea/block-checker/database"
 	"github.com/furutachiKurea/block-checker/handlers"
 
@@ -35,8 +36,11 @@ func main() {
 	e.GET("/api/databases", handlers.APIDatabasesHandler)
 	e.GET("/api/databases/:database/tables", handlers.APITablesHandler)
 
+	// 获取配置
+	appConfig := config.GetServerConfig()
+
 	// 启动服务器
-	serverAddr := "0.0.0.0:8080"
+	serverAddr := "0.0.0.0:" + appConfig.Port
 	log.Printf("Starting server on %s", serverAddr)
 	if err := e.Start(serverAddr); err != nil {
 		log.Printf("Server error: %v", err)

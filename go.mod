@@ -1,9 +1,9 @@
 module github.com/furutachiKurea/block-checker
 
-go 1.24.5
+go 1.20
 
 require (
-	github.com/go-sql-driver/mysql v1.9.3
+	github.com/go-sql-driver/mysql v1.8.0
 	github.com/labstack/echo/v4 v4.11.4
 )
 

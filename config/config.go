@@ -11,6 +11,11 @@ type DBConfig struct {
 	Name string
 }
 
+// ServerConfig 应用配置
+type ServerConfig struct {
+	Port string
+}
+
 // GetDBConfig 从环境变量读取数据库配置
 func GetDBConfig() *DBConfig {
 	return &DBConfig{
@@ -19,6 +24,13 @@ func GetDBConfig() *DBConfig {
 		User: getEnv("DB_USER", "root"),
 		Pass: getEnv("DB_PASS", ""),
 		Name: getEnv("DB_NAME", "mysql"),
+	}
+}
+
+// GetServerConfig 从环境变量读取应用配置
+func GetServerConfig() *ServerConfig {
+	return &ServerConfig{
+		Port: getEnv("PORT", "5000"),
 	}
 }
 
