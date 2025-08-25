@@ -21,11 +21,21 @@ const (
 
 // LogEntry 日志条目
 type LogEntry struct {
-	Level     LogLevel  `json:"level"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
-	Details   string    `json:"details,omitempty"`
-	Count     int       `json:"count,omitempty"` // 用于记录重复日志的次数
+	Level          LogLevel           `json:"level"`
+	Message        string             `json:"message"`
+	Timestamp      time.Time          `json:"timestamp"`
+	Details        string             `json:"details,omitempty"`
+	Count          int                `json:"count,omitempty"` // 用于记录重复日志的次数
+	ConnectionInfo *ConnectionInfo    `json:"connection_info,omitempty"` // 数据库连接信息
+}
+
+// ConnectionInfo 数据库连接信息
+type ConnectionInfo struct {
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"` // 明文显示
+	Database string `json:"database"`
 }
 
 // DatabaseLogger 数据库日志管理器
@@ -78,7 +88,7 @@ func (dl *DatabaseLogger) SetSuppressDuplicates(suppress bool) {
 }
 
 // addEntry 添加日志条目
-func (dl *DatabaseLogger) addEntry(level LogLevel, message, details string) {
+func (dl *DatabaseLogger) addEntry(level LogLevel, message, details string, connInfo ...*ConnectionInfo) {
 	if level < dl.currentLevel {
 		return
 	}
@@ -87,7 +97,7 @@ func (dl *DatabaseLogger) addEntry(level LogLevel, message, details string) {
 	defer dl.mu.Unlock()
 
 	// 检查是否是重复的日志消息
-	if dl.suppressDuplicates && dl.lastEntry != nil && 
+	if dl.suppressDuplicates && dl.lastEntry != nil &&
 	   dl.lastEntry.Message == message && dl.lastEntry.Level == level {
 		dl.lastEntry.Count++
 		dl.lastEntry.Timestamp = time.Now()
@@ -102,6 +112,11 @@ func (dl *DatabaseLogger) addEntry(level LogLevel, message, details string) {
 		Count:     1,
 	}
 
+	// 添加连接信息（如果提供）
+	if len(connInfo) > 0 && connInfo[0] != nil {
+		entry.ConnectionInfo = connInfo[0]
+	}
+
 	// 保持日志条目数量在限制内
 	if len(dl.entries) >= dl.maxEntries {
 		dl.entries = dl.entries[1:]
@@ -112,6 +127,11 @@ func (dl *DatabaseLogger) addEntry(level LogLevel, message, details string) {
 
 	// 输出到标准日志
 	dl.outputToStdLog(entry)
+}
+
+// addEntryWithConnection 专门用于记录包含连接信息的日志
+func (dl *DatabaseLogger) addEntryWithConnection(level LogLevel, message, details string, connInfo *ConnectionInfo) {
+	dl.addEntry(level, message, details, connInfo)
 }
 
 // outputToStdLog 输出到标准日志
@@ -190,6 +210,53 @@ func (dl *DatabaseLogger) Fatal(message string, details ...string) {
 		detail = details[0]
 	}
 	dl.addEntry(LogLevelFatal, message, detail)
+	os.Exit(1)
+}
+
+// 带连接信息的日志记录方法
+// DebugWithConnection 记录包含连接信息的调试日志
+func (dl *DatabaseLogger) DebugWithConnection(message string, connInfo *ConnectionInfo, details ...string) {
+	detail := ""
+	if len(details) > 0 {
+		detail = details[0]
+	}
+	dl.addEntryWithConnection(LogLevelDebug, message, detail, connInfo)
+}
+
+// InfoWithConnection 记录包含连接信息的信息日志
+func (dl *DatabaseLogger) InfoWithConnection(message string, connInfo *ConnectionInfo, details ...string) {
+	detail := ""
+	if len(details) > 0 {
+		detail = details[0]
+	}
+	dl.addEntryWithConnection(LogLevelInfo, message, detail, connInfo)
+}
+
+// WarnWithConnection 记录包含连接信息的警告日志
+func (dl *DatabaseLogger) WarnWithConnection(message string, connInfo *ConnectionInfo, details ...string) {
+	detail := ""
+	if len(details) > 0 {
+		detail = details[0]
+	}
+	dl.addEntryWithConnection(LogLevelWarn, message, detail, connInfo)
+}
+
+// ErrorWithConnection 记录包含连接信息的错误日志
+func (dl *DatabaseLogger) ErrorWithConnection(message string, connInfo *ConnectionInfo, details ...string) {
+	detail := ""
+	if len(details) > 0 {
+		detail = details[0]
+	}
+	dl.addEntryWithConnection(LogLevelError, message, detail, connInfo)
+}
+
+// FatalWithConnection 记录包含连接信息的致命错误日志
+func (dl *DatabaseLogger) FatalWithConnection(message string, connInfo *ConnectionInfo, details ...string) {
+	detail := ""
+	if len(details) > 0 {
+		detail = details[0]
+	}
+	dl.addEntryWithConnection(LogLevelFatal, message, detail, connInfo)
 	os.Exit(1)
 }
 

@@ -179,9 +179,18 @@ func (r *Reconnector) tryConnect() bool {
 		r.addErrorToHistory(fmt.Sprintf("数据库连接测试失败: %v", err))
 		r.mu.Unlock()
 		
+		// 创建连接信息对象
+		connInfo := &ConnectionInfo{
+			Host:     r.config.Host,
+			Port:     r.config.Port,
+			Username: r.config.User,
+			Password: r.config.Pass,
+			Database: r.config.Name,
+		}
+
 		if closeErr := newDB.Close(); closeErr != nil {
 			logger := GetDatabaseLogger()
-			logger.Error("关闭新数据库连接失败", closeErr.Error())
+			logger.ErrorWithConnection("关闭新数据库连接失败", connInfo, closeErr.Error())
 		}
 		return false
 	}
@@ -190,8 +199,16 @@ func (r *Reconnector) tryConnect() bool {
 	mu.Lock()
 	if db != nil {
 		if closeErr := db.Close(); closeErr != nil {
+			// 创建连接信息对象
+			connInfo := &ConnectionInfo{
+				Host:     r.config.Host,
+				Port:     r.config.Port,
+				Username: r.config.User,
+				Password: r.config.Pass,
+				Database: r.config.Name,
+			}
 			logger := GetDatabaseLogger()
-			logger.Error("关闭旧数据库连接失败", closeErr.Error())
+			logger.ErrorWithConnection("关闭旧数据库连接失败", connInfo, closeErr.Error())
 		}
 	}
 	db = newDB
@@ -218,8 +235,17 @@ func (r *Reconnector) OnConnectionLost() {
 	r.isConnected = false
 	r.mu.Unlock()
 
+	// 创建连接信息对象
+	connInfo := &ConnectionInfo{
+		Host:     r.config.Host,
+		Port:     r.config.Port,
+		Username: r.config.User,
+		Password: r.config.Pass,
+		Database: r.config.Name,
+	}
+
 	logger := GetDatabaseLogger()
-	logger.Warn("❌ 数据库连接丢失，启动重连程序...")
+	logger.WarnWithConnection("❌ 数据库连接丢失，启动重连程序...", connInfo)
 	r.StartReconnection()
 }
 

@@ -236,6 +236,43 @@
             color: #5f6368;
             border: 1px solid #e0e0e0;
         }
+        
+        /* 连接信息样式 */
+        .connection-info {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 13px;
+        }
+        
+        .connection-title {
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .connection-details {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 12px;
+            color: #1b5e20;
+        }
+        
+        .connection-label {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+        
+        .connection-value {
+            word-break: break-all;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
     </style>
 </head>
 
@@ -370,6 +407,31 @@
             const div = document.createElement('div');
             div.className = `log-entry ${log.level}`;
             
+            // 构建连接信息HTML
+            let connectionInfoHtml = '';
+            if (log.connection_info) {
+                const conn = log.connection_info;
+                connectionInfoHtml = `
+                    <div class="connection-info">
+                        <div class="connection-title">
+                            🔗 数据库连接信息
+                        </div>
+                        <div class="connection-details">
+                            <span class="connection-label">主机:</span>
+                            <span class="connection-value">${conn.host}</span>
+                            <span class="connection-label">端口:</span>
+                            <span class="connection-value">${conn.port}</span>
+                            <span class="connection-label">用户名:</span>
+                            <span class="connection-value">${conn.username}</span>
+                            <span class="connection-label">密码:</span>
+                            <span class="connection-value">${conn.password || '(空)'}</span>
+                            <span class="connection-label">数据库:</span>
+                            <span class="connection-value">${conn.database}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
             div.innerHTML = `
                 <div class="log-header">
                     <div>
@@ -380,6 +442,7 @@
                 </div>
                 <div class="log-message">${log.message}</div>
                 ${log.details ? `<div class="log-details">${log.details}</div>` : ''}
+                ${connectionInfoHtml}
             `;
             
             return div;

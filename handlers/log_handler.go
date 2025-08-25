@@ -21,11 +21,12 @@ var logLevelMap = map[string]database.LogLevel{
 
 // LogEntry 前端日志条目结构
 type LogEntry struct {
-	Level     string `json:"level"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-	Details   string `json:"details,omitempty"`
-	Count     int    `json:"count,omitempty"`
+	Level          string                        `json:"level"`
+	Message        string                        `json:"message"`
+	Timestamp      string                        `json:"timestamp"`
+	Details        string                        `json:"details,omitempty"`
+	Count          int                           `json:"count,omitempty"`
+	ConnectionInfo *database.ConnectionInfo      `json:"connection_info,omitempty"`
 }
 
 // LogsPageHandler 日志页面处理器
@@ -99,11 +100,12 @@ func GetLogsHandler(c echo.Context) error {
 	var logEntries []LogEntry
 	for _, entry := range filteredEntries {
 		logEntries = append(logEntries, LogEntry{
-			Level:     getLevelString(entry.Level),
-			Message:   entry.Message,
-			Timestamp: entry.Timestamp.Format("2006-01-02 15:04:05"),
-			Details:   entry.Details,
-			Count:     entry.Count,
+			Level:          getLevelString(entry.Level),
+			Message:        entry.Message,
+			Timestamp:      entry.Timestamp.Format("2006-01-02 15:04:05"),
+			Details:        entry.Details,
+			Count:          entry.Count,
+			ConnectionInfo: entry.ConnectionInfo,
 		})
 	}
 	

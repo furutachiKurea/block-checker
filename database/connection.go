@@ -52,6 +52,15 @@ func InitDB() error {
 	config := config.GetDBConfig()
 	dsn := buildDSN(config)
 
+	// 创建连接信息对象
+	connInfo := &ConnectionInfo{
+		Host:     config.Host,
+		Port:     config.Port,
+		Username: config.User,
+		Password: config.Pass, // 明文显示
+		Database: config.Name,
+	}
+
 	var err error
 	mu.Lock()
 	db, err = sql.Open("mysql", dsn)
@@ -59,7 +68,7 @@ func InitDB() error {
 
 	if err != nil {
 		logger := GetDatabaseLogger()
-		logger.Error("数据库连接打开失败", err.Error())
+		logger.ErrorWithConnection("数据库连接打开失败", connInfo, err.Error())
 		return fmt.Errorf("open database: %v", err)
 	}
 
@@ -74,7 +83,7 @@ func InitDB() error {
 		
 		// 分析错误并记录
 		errorDetails := analyzeError(err, 0)
-		logger.Error("❌ 数据库连接测试失败",
+		logger.ErrorWithConnection("❌ 数据库连接测试失败", connInfo,
 			fmt.Sprintf("错误类型: %s, 错误代码: %s, 问题原因: %s, 解决建议: %s",
 				errorDetails.Type, errorDetails.Code, errorDetails.Cause, errorDetails.Suggestion))
 		
@@ -85,7 +94,7 @@ func InitDB() error {
 	}
 
 	logger := GetDatabaseLogger()
-	logger.Info(fmt.Sprintf("✅ 数据库连接成功: %s:%s", config.Host, config.Port))
+	logger.InfoWithConnection(fmt.Sprintf("✅ 数据库连接成功: %s:%s", config.Host, config.Port), connInfo)
 
 	// 标记为已连接
 	reconnector := GetReconnector()
@@ -107,12 +116,25 @@ func CloseDB() {
 	reconnector := GetReconnector()
 	reconnector.StopReconnection()
 
+	// 获取当前连接配置用于日志记录
+	config := config.GetDBConfig()
+	connInfo := &ConnectionInfo{
+		Host:     config.Host,
+		Port:     config.Port,
+		Username: config.User,
+		Password: config.Pass,
+		Database: config.Name,
+	}
+
 	// 关闭数据库连接
 	mu.Lock()
 	if db != nil {
 		if err := db.Close(); err != nil {
 			logger := GetDatabaseLogger()
-			logger.Error("关闭数据库连接失败", err.Error())
+			logger.ErrorWithConnection("关闭数据库连接失败", connInfo, err.Error())
+		} else {
+			logger := GetDatabaseLogger()
+			logger.InfoWithConnection("数据库连接已关闭", connInfo)
 		}
 		db = nil
 	}
