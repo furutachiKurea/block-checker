@@ -16,6 +16,10 @@ var (
 	tablesTemplate    *template.Template
 )
 
+var (
+	tableDetailTemplate *template.Template
+)
+
 // 初始化模板
 func init() {
 	var err error
@@ -42,6 +46,11 @@ func init() {
 	tablesTemplate, err = template.ParseFS(templateFS, "tables.html")
 	if err != nil {
 		panic("failed to parse tables template: " + err.Error())
+	}
+	// 加载表结构详情模板
+	tableDetailTemplate, err = template.ParseFS(templateFS, "table_detail.html")
+	if err != nil {
+		panic("failed to parse table_detail template: " + err.Error())
 	}
 }
 
@@ -82,6 +91,18 @@ type TableInfo struct {
 	Comment string
 	Rows    int64
 	Size    string
+}
+
+type TableDetailData struct {
+	DatabaseName string
+	TableName    string
+	Detail       interface{}
+}
+
+func RenderTableDetail(data TableDetailData) (string, error) {
+	var buf bytes.Buffer
+	err := tableDetailTemplate.Execute(&buf, data)
+	return buf.String(), err
 }
 
 // RenderHome 渲染主页

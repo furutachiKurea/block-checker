@@ -26,7 +26,12 @@
         <div class="tables-grid">
             {{range .Tables}}
             <div class="table-card">
-                <div class="table-name">{{.Name}}</div>
+                <div class="table-name">
+                    {{.Name}}
+                </div>
+                <div class="table-btn-container">
+                    <a href="/database/{{$.DatabaseName}}/table/{{.Name}}" class="view-btn">查看详情</a>
+                </div>
                 <div class="table-info">
                     📋 表名: {{.Name}}<br>
                     📊 行数: {{.Rows}} 行

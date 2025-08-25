@@ -136,6 +136,41 @@ func TablesHandler(c echo.Context) error {
 	return c.HTML(http.StatusOK, html)
 }
 
+// TableDetailHandler 表结构详情处理器
+func TableDetailHandler(c echo.Context) error {
+	databaseName := c.Param("database")
+	tableName := c.Param("table")
+	if databaseName == "" || tableName == "" {
+		data := templates.ErrorData{
+			Title:   "参数错误",
+			Message: "数据库名和表名不能为空",
+		}
+		html, _ := templates.RenderError(data)
+		return c.HTML(http.StatusBadRequest, html)
+	}
+
+	detail, err := database.GetTableDetail(databaseName, tableName)
+	if err != nil {
+		data := templates.ErrorData{
+			Title:   "获取表结构失败",
+			Message: err.Error(),
+		}
+		html, _ := templates.RenderError(data)
+		return c.HTML(http.StatusInternalServerError, html)
+	}
+
+	data := templates.TableDetailData{
+		DatabaseName: databaseName,
+		TableName:    tableName,
+		Detail:       detail,
+	}
+	html, err := templates.RenderTableDetail(data)
+	if err != nil {
+		return c.HTML(http.StatusInternalServerError, "模板渲染错误")
+	}
+	return c.HTML(http.StatusOK, html)
+}
+
 // APIDatabasesHandler API 数据库列表处理器
 func APIDatabasesHandler(c echo.Context) error {
 	databases, err := database.GetDatabases()

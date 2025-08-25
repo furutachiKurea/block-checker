@@ -32,6 +32,9 @@ func main() {
 	e.GET("/databases", handlers.DatabasesHandler)
 	e.GET("/databases/:database/tables", handlers.TablesHandler)
 
+	// 表结构详情路由
+	e.GET("/database/:database/table/:table", handlers.TableDetailHandler)
+
 	// API 路由
 	e.GET("/api/databases", handlers.APIDatabasesHandler)
 	e.GET("/api/databases/:database/tables", handlers.APITablesHandler)

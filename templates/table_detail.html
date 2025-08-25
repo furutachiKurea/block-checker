@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表结构详情 - {{.TableName}} - Block Mechanica</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+<div class="container">
+    <a href="/databases/{{.DatabaseName}}/tables" class="back-btn">← 返回表列表</a>
+    <div class="header">
+        <h1>📑{{.TableName}} 表结构详情</h1>
+        <p>数据库：<strong>{{.DatabaseName}}</strong>，表：<strong>{{.TableName}}</strong></p>
+    </div>
+
+    <h2 class="section-title">字段信息</h2>
+    <div class="md-card table-detail-wrapper md-elevation">
+        <div class="md-card-header">
+            <div class="md-card-title">字段信息</div>
+            <div class="md-card-sub">共 {{len .Detail.Fields}} 个字段</div>
+        </div>
+        <div class="table-scroll">
+            <table class="table-detail">
+                <thead>
+                <tr>
+                    <th class="col-name">字段名</th>
+                    <th class="col-type">类型</th>
+                    <th class="col-null">可空</th>
+                    <th class="col-pk">主键</th>
+                    <th class="col-default">默认值</th>
+                    <th class="col-extra">额外</th>
+                    <th class="col-comment">注释</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range .Detail.Fields}}
+                <tr>
+                    <td class="col-name">{{.Name}}</td>
+                    <td class="col-type"><code>{{.Type}}</code></td>
+                    <td class="col-null">
+                        {{if .IsNullable}}
+                            <span class="chip chip-true" aria-label="可空">
+                                <svg class="icon icon-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                    <polyline points="3 9 7 13 13 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="chip-label">是</span>
+                            </span>
+                        {{else}}
+                            <span class="chip chip-false" aria-label="不可空">
+                                <svg class="icon icon-cross" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                    <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                <span class="chip-label">否</span>
+                            </span>
+                        {{end}}
+                    </td>
+                    <td class="col-pk">
+                        {{if .IsPrimary}}
+                            <span class="badge-pk" aria-label="主键">
+                                <span class="chip-label">PK</span>
+                            </span>
+                        {{else}}—{{end}}
+                    </td>
+                    <td class="col-default">
+                        {{if .Default}}
+                            <code>{{.Default}}</code>
+                        {{else}}
+                            <span class="md-empty">NULL</span>
+                        {{end}}
+                    </td>
+                    <td class="col-extra">{{if .Extra}}{{.Extra}}{{else}}—{{end}}</td>
+                    <td class="col-comment">{{if .Comment}}{{.Comment}}{{else}}—{{end}}</td>
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2 class="section-title">索引信息</h2>
+    <div class="md-card table-detail-wrapper md-elevation">
+        <div class="md-card-header">
+            <div class="md-card-title">索引信息</div>
+            <div class="md-card-sub">共 {{len .Detail.Indexes}} 个索引</div>
+        </div>
+        <div class="table-scroll" style="padding:16px 20px;">
+            {{if len .Detail.Indexes}}
+            <ul class="md-list">
+                {{range .Detail.Indexes}}
+                <li class="md-list-item">
+                    <div class="md-list-left">
+                        <strong>{{.Name}}</strong>
+                        {{if .Unique}}<span class="index-badge">唯一</span>{{end}}
+                    </div>
+                    <div class="md-list-meta">
+                        <div class="cols-list">
+                            {{range $i, $col := .Columns}}{{if $i}}, {{end}}<code class="col-chip">{{$col}}</code>{{end}}
+                        </div>
+                    </div>
+                </li>
+                {{end}}
+            </ul>
+            {{else}}
+            <p class="md-empty">无索引</p>
+            {{end}}
+        </div>
+    </div>
+
+    <h2 class="section-title">约束信息</h2>
+    <div class="md-card table-detail-wrapper md-elevation">
+        <div class="md-card-header">
+            <div class="md-card-title">约束信息</div>
+            <div class="md-card-sub">共 {{len .Detail.Constraints}} 条约束</div>
+        </div>
+        <div class="table-scroll" style="padding:16px 20px;">
+            {{if len .Detail.Constraints}}
+            <ul class="md-list">
+                {{range .Detail.Constraints}}
+                <li class="md-list-item">
+                    <div class="md-list-left">
+                        <strong>{{.Type}}</strong>
+                        <span class="constraint-name">{{.Name}}</span>
+                    </div>
+                    <div class="md-list-meta">
+                        <div class="cols-list">
+                            {{range $i, $col := .Columns}}{{if $i}}, {{end}}<code class="col-chip">{{$col}}</code>{{end}}
+                        </div>
+                        {{if eq .Type "FOREIGN KEY"}}
+                        <div class="ref" style="margin-top:8px;">
+                            引用：<code class="col-chip">{{.ReferencedTable}}({{.ReferencedColumn}})</code>
+                        </div>
+                        {{end}}
+                    </div>
+                </li>
+                {{end}}
+            </ul>
+            {{else}}
+            <p class="md-empty">无约束</p>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="footer">
+        Powered by Echo v4 | Block Mechanica 数据库集群检测工具
+    </div>
+</div>
+</body>
+</html>
