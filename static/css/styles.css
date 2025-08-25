@@ -516,6 +516,94 @@ body {
     }
 }
 
+/* 错误详情样式 */
+.error-details {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid #ff6b6b;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.error-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.error-code {
+    background: #ff6b6b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8em;
+    font-family: 'Courier New', monospace;
+}
+
+.error-type {
+    background: rgba(255, 255, 255, 0.2);
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    text-transform: uppercase;
+}
+
+.error-cause,
+.error-suggestion,
+.retry-info,
+.error-time {
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.error-cause strong,
+.error-suggestion strong,
+.retry-info strong,
+.error-time strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.error-suggestion {
+    background: rgba(52, 152, 219, 0.1);
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+}
+
+.retry-info {
+    background: rgba(241, 196, 15, 0.1);
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #f1c40f;
+}
+
+/* 状态卡片中的错误信息颜色调整 */
+.status-not-connected .error-details {
+    border-left-color: #e74c3c;
+}
+
+.status-reconnecting .error-details {
+    border-left-color: #f39c12;
+}
+
+.status-failed .error-details {
+    border-left-color: #c0392b;
+}
+
+.status-reconnecting .error-code {
+    background: #f39c12;
+}
+
+.status-failed .error-code {
+    background: #c0392b;
+}
+
 /* 状态标签和值 */
 .status-label {
     font-size: 13px;

@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -17,11 +16,35 @@ var (
 	mu sync.RWMutex
 )
 
+// ErrorType 错误类型枚举
+type ErrorType string
+
+const (
+	ErrorTypeNetwork       ErrorType = "network"
+	ErrorTypeAuth         ErrorType = "authentication"
+	ErrorTypeConfig       ErrorType = "configuration"
+	ErrorTypeTimeout      ErrorType = "timeout"
+	ErrorTypeSQL          ErrorType = "sql"
+	ErrorTypeUnknown      ErrorType = "unknown"
+)
+
+// ErrorDetails 详细错误信息
+type ErrorDetails struct {
+	Type        ErrorType `json:"type"`
+	Code        string    `json:"code,omitempty"`
+	Message     string    `json:"message"`
+	Cause       string    `json:"cause,omitempty"`
+	Suggestion  string    `json:"suggestion,omitempty"`
+	Timestamp   string    `json:"timestamp"`
+	RetryCount  int       `json:"retry_count,omitempty"`
+}
+
 // DBStatus 数据库状态响应
 type DBStatus struct {
-	Status    string `json:"status"`
-	Timestamp string `json:"timestamp,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Status       string        `json:"status"`
+	Timestamp    string        `json:"timestamp,omitempty"`
+	Error        string        `json:"error,omitempty"`
+	ErrorDetails *ErrorDetails `json:"error_details,omitempty"`
 }
 
 // InitDB 初始化数据库连接
@@ -35,7 +58,8 @@ func InitDB() error {
 	mu.Unlock()
 
 	if err != nil {
-		log.Printf("Failed to open database: %v", err)
+		logger := GetDatabaseLogger()
+		logger.Error("数据库连接打开失败", err.Error())
 		return fmt.Errorf("open database: %v", err)
 	}
 
@@ -46,14 +70,22 @@ func InitDB() error {
 
 	// 测试连接
 	if err := db.Ping(); err != nil {
-		log.Printf("Failed to ping database: %v", err)
+		logger := GetDatabaseLogger()
+		
+		// 分析错误并记录
+		errorDetails := analyzeError(err, 0)
+		logger.Error("❌ 数据库连接测试失败",
+			fmt.Sprintf("错误类型: %s, 错误代码: %s, 问题原因: %s, 解决建议: %s",
+				errorDetails.Type, errorDetails.Code, errorDetails.Cause, errorDetails.Suggestion))
+		
 		// 启动重连器
 		reconnector := GetReconnector()
 		reconnector.StartReconnection()
 		return nil
 	}
 
-	log.Printf("Database connected successfully to %s:%s", config.Host, config.Port)
+	logger := GetDatabaseLogger()
+	logger.Info(fmt.Sprintf("✅ 数据库连接成功: %s:%s", config.Host, config.Port))
 
 	// 标记为已连接
 	reconnector := GetReconnector()
@@ -79,7 +111,8 @@ func CloseDB() {
 	mu.Lock()
 	if db != nil {
 		if err := db.Close(); err != nil {
-			log.Printf("Failed to close database connection: %v", err)
+			logger := GetDatabaseLogger()
+			logger.Error("关闭数据库连接失败", err.Error())
 		}
 		db = nil
 	}
@@ -91,27 +124,47 @@ func CheckStatus() *DBStatus {
 	reconnector := GetReconnector()
 
 	if db == nil {
+		errorDetails := &ErrorDetails{
+			Type:       ErrorTypeConfig,
+			Code:       "CFG_002",
+			Message:    "Database not initialized",
+			Cause:      "数据库连接未初始化",
+			Suggestion: "请检查数据库配置和启动过程",
+			Timestamp:  time.Now().Format("2006-01-02 15:04:05"),
+		}
 		return &DBStatus{
-			Status: "Not Connected",
-			Error:  "Database not initialized",
+			Status:       "Not Connected",
+			Error:        "Database not initialized",
+			ErrorDetails: errorDetails,
 		}
 	}
 
 	// 先测试连接
 	if err := db.Ping(); err != nil {
+		// 获取重连次数
+		retryCount := reconnector.GetRetryCount()
+		errorDetails := analyzeError(err, retryCount)
+		
 		// 触发重连
 		reconnector.OnConnectionLost()
 
 		if reconnector.IsReconnecting() {
+			errorDetails.Message = "正在尝试重新连接数据库..."
+			if retryCount > 0 {
+				errorDetails.Message = fmt.Sprintf("正在尝试重新连接数据库... (第 %d 次重试)", retryCount)
+			}
+			
 			return &DBStatus{
-				Status: "Reconnecting",
-				Error:  "Attempting to reconnect to database...",
+				Status:       "Reconnecting",
+				Error:        errorDetails.Message,
+				ErrorDetails: errorDetails,
 			}
 		}
 
 		return &DBStatus{
-			Status: "Not Connected",
-			Error:  fmt.Sprintf("Database connection failed: %v", err),
+			Status:       "Not Connected",
+			Error:        fmt.Sprintf("Database connection failed: %v", err),
+			ErrorDetails: errorDetails,
 		}
 	}
 
@@ -119,9 +172,11 @@ func CheckStatus() *DBStatus {
 	var currentTime string
 	err := db.QueryRow("SELECT NOW()").Scan(&currentTime)
 	if err != nil {
+		errorDetails := analyzeError(err, 0)
 		return &DBStatus{
-			Status: "Failed",
-			Error:  fmt.Sprintf("Query failed: %v", err),
+			Status:       "Failed",
+			Error:        fmt.Sprintf("Query failed: %v", err),
+			ErrorDetails: errorDetails,
 		}
 	}
 
@@ -129,6 +184,17 @@ func CheckStatus() *DBStatus {
 		Status:    "OK",
 		Timestamp: currentTime,
 	}
+}
+
+// analyzeError 分析错误类型和详情
+func analyzeError(err error, retryCount int) *ErrorDetails {
+	if err == nil {
+		return nil
+	}
+
+	// 使用新的错误分析器
+	analyzer := GetErrorAnalyzer()
+	return analyzer.AnalyzeError(err, retryCount)
 }
 
 // buildDSN 构建数据库连接字符串

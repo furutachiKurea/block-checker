@@ -26,14 +26,63 @@
             <div class="error-message">
                 🔌 集群未连接: {{.Error}}
             </div>
+            {{if .ErrorDetails}}
+            <div class="error-details">
+                <div class="error-header">
+                    <span class="error-code">{{.ErrorDetails.Code}}</span>
+                    <span class="error-type">{{.ErrorDetails.Type}}</span>
+                </div>
+                <div class="error-cause">
+                    <strong>原因:</strong> {{.ErrorDetails.Cause}}
+                </div>
+                {{if .ErrorDetails.RetryCount}}
+                <div class="retry-info">
+                    <strong>重试次数:</strong> {{.ErrorDetails.RetryCount}}
+                </div>
+                {{end}}
+                <div class="error-time">
+                    <strong>错误时间:</strong> {{.ErrorDetails.Timestamp}}
+                </div>
+            </div>
+            {{end}}
             {{else if eq .Status "Reconnecting"}}
             <div class="error-message">
                 🔄 正在重连集群: {{.Error}}
             </div>
+            {{if .ErrorDetails}}
+            <div class="error-details">
+                <div class="error-header">
+                    <span class="error-code">{{.ErrorDetails.Code}}</span>
+                    <span class="error-type">{{.ErrorDetails.Type}}</span>
+                </div>
+                {{if .ErrorDetails.RetryCount}}
+                <div class="retry-info">
+                    <strong>当前重试:</strong> 第 {{.ErrorDetails.RetryCount}} 次
+                </div>
+                {{end}}
+                <div class="error-cause">
+                    <strong>连接问题:</strong> {{.ErrorDetails.Cause}}
+                </div>
+            </div>
+            {{end}}
             {{else}}
             <div class="error-message">
                 ❌ 连接错误: {{.Error}}
             </div>
+            {{if .ErrorDetails}}
+            <div class="error-details">
+                <div class="error-header">
+                    <span class="error-code">{{.ErrorDetails.Code}}</span>
+                    <span class="error-type">{{.ErrorDetails.Type}}</span>
+                </div>
+                <div class="error-cause">
+                    <strong>原因:</strong> {{.ErrorDetails.Cause}}
+                </div>
+                <div class="error-time">
+                    <strong>错误时间:</strong> {{.ErrorDetails.Timestamp}}
+                </div>
+            </div>
+            {{end}}
             {{end}}
         </div>
 
@@ -41,6 +90,12 @@
             <h3>🔍 集群数据浏览</h3>
             <p>探索 Block Mechanica 数据库集群的结构和内容</p>
             <a href="/databases" class="explore-btn">浏览集群数据</a>
+        </div>
+        
+        <div class="placeholder">
+            <h3>📋 系统日志管理</h3>
+            <p>查看数据库连接日志、错误分析和系统状态</p>
+            <a href="/logs" class="explore-btn">查看系统日志</a>
         </div>
 
         <button class="refresh-btn" onclick="location.reload()">

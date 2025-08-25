@@ -22,11 +22,26 @@ func HomeHandler(c echo.Context) error {
 		statusClass = "status-failed"
 	}
 
+	// 转换 ErrorDetails 结构
+	var errorDetails *templates.ErrorDetails
+	if status.ErrorDetails != nil {
+		errorDetails = &templates.ErrorDetails{
+			Type:       string(status.ErrorDetails.Type),
+			Code:       status.ErrorDetails.Code,
+			Message:    status.ErrorDetails.Message,
+			Cause:      status.ErrorDetails.Cause,
+			Suggestion: status.ErrorDetails.Suggestion,
+			Timestamp:  status.ErrorDetails.Timestamp,
+			RetryCount: status.ErrorDetails.RetryCount,
+		}
+	}
+
 	data := templates.HomeData{
-		Status:      status.Status,
-		StatusClass: statusClass,
-		Timestamp:   status.Timestamp,
-		Error:       status.Error,
+		Status:       status.Status,
+		StatusClass:  statusClass,
+		Timestamp:    status.Timestamp,
+		Error:        status.Error,
+		ErrorDetails: errorDetails,
 	}
 
 	html, err := templates.RenderHome(data)

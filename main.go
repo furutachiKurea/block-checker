@@ -35,9 +35,25 @@ func main() {
 	// 表结构详情路由
 	e.GET("/database/:database/table/:table", handlers.TableDetailHandler)
 
+	// 日志管理路由
+	e.GET("/logs", handlers.LogsPageHandler)
+
 	// API 路由
 	e.GET("/api/databases", handlers.APIDatabasesHandler)
 	e.GET("/api/databases/:database/tables", handlers.APITablesHandler)
+	
+	// 日志管理 API 路由
+	e.GET("/api/logs", handlers.GetLogsHandler)
+	e.GET("/api/logs/summary", handlers.GetLogSummaryHandler)
+	e.POST("/api/logs/level", handlers.SetLogLevelHandler)
+	e.POST("/api/logs/clear", handlers.ClearLogsHandler)
+	
+	// 错误分析 API 路由
+	e.GET("/api/errors/summaries", handlers.GetErrorSummariesHandler)
+	e.GET("/api/errors/top", handlers.GetTopErrorsHandler)
+	e.GET("/api/errors/trends", handlers.GetErrorTrendsHandler)
+	e.POST("/api/errors/resolve", handlers.MarkErrorResolvedHandler)
+	e.POST("/api/errors/clear", handlers.ClearOldErrorsHandler)
 
 	// 获取配置
 	appConfig := config.GetServerConfig()

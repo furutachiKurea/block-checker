@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
-	"log"
+	"fmt"
 	"sync"
 	"time"
 
@@ -18,6 +18,9 @@ type Reconnector struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	config       *config.DBConfig
+	retryCount   int
+	lastError    error
+	errorHistory []string
 }
 
 var (
@@ -52,6 +55,30 @@ func (r *Reconnector) IsReconnecting() bool {
 	return r.reconnecting
 }
 
+// GetRetryCount 获取重试次数
+func (r *Reconnector) GetRetryCount() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.retryCount
+}
+
+// GetLastError 获取最后一次错误
+func (r *Reconnector) GetLastError() error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.lastError
+}
+
+// GetErrorHistory 获取错误历史
+func (r *Reconnector) GetErrorHistory() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	// 返回副本避免并发问题
+	history := make([]string, len(r.errorHistory))
+	copy(history, r.errorHistory)
+	return history
+}
+
 // StartReconnection 开始重连
 func (r *Reconnector) StartReconnection() {
 	r.mu.Lock()
@@ -78,6 +105,10 @@ func (r *Reconnector) reconnectionLoop() {
 	initialDelay := 1 * time.Second
 	maxDelay := 30 * time.Second
 	currentDelay := initialDelay
+	
+	// 创建重连专用日志记录器
+	reconnLogger := NewReconnectionLogger()
+	reconnLogger.StartReconnection()
 
 	for {
 		select {
@@ -87,12 +118,26 @@ func (r *Reconnector) reconnectionLoop() {
 			// 尝试连接
 			if r.tryConnect() {
 				r.mu.Lock()
+				successRetryCount := r.retryCount
 				r.isConnected = true
 				r.reconnecting = false
+				r.retryCount = 0 // 重置重试计数
+				r.lastError = nil
 				r.mu.Unlock()
-				log.Printf("Database reconnection successful")
+				
+				// 记录成功日志
+				reconnLogger.LogSuccess(successRetryCount)
 				return
 			}
+
+			r.mu.Lock()
+			r.retryCount++
+			retryCount := r.retryCount
+			lastError := r.lastError
+			r.mu.Unlock()
+
+			// 使用新的日志记录器
+			reconnLogger.LogRetry(retryCount, currentDelay, lastError)
 
 			// 等待后重试
 			select {
@@ -104,7 +149,6 @@ func (r *Reconnector) reconnectionLoop() {
 				if currentDelay > maxDelay {
 					currentDelay = maxDelay
 				}
-				log.Printf("Retrying database connection in %v...", currentDelay)
 			}
 		}
 	}
@@ -116,7 +160,10 @@ func (r *Reconnector) tryConnect() bool {
 
 	newDB, err := sql.Open("mysql", dsn)
 	if err != nil {
-		log.Printf("Failed to open database during reconnection: %v", err)
+		r.mu.Lock()
+		r.lastError = err
+		r.addErrorToHistory(fmt.Sprintf("打开数据库连接失败: %v", err))
+		r.mu.Unlock()
 		return false
 	}
 
@@ -127,9 +174,14 @@ func (r *Reconnector) tryConnect() bool {
 
 	// 测试连接
 	if err := newDB.Ping(); err != nil {
-		log.Printf("Failed to ping database during reconnection: %v", err)
+		r.mu.Lock()
+		r.lastError = err
+		r.addErrorToHistory(fmt.Sprintf("数据库连接测试失败: %v", err))
+		r.mu.Unlock()
+		
 		if closeErr := newDB.Close(); closeErr != nil {
-			log.Printf("Failed to close new database connection: %v", closeErr)
+			logger := GetDatabaseLogger()
+			logger.Error("关闭新数据库连接失败", closeErr.Error())
 		}
 		return false
 	}
@@ -138,7 +190,8 @@ func (r *Reconnector) tryConnect() bool {
 	mu.Lock()
 	if db != nil {
 		if closeErr := db.Close(); closeErr != nil {
-			log.Printf("Failed to close old database connection: %v", closeErr)
+			logger := GetDatabaseLogger()
+			logger.Error("关闭旧数据库连接失败", closeErr.Error())
 		}
 	}
 	db = newDB
@@ -147,13 +200,26 @@ func (r *Reconnector) tryConnect() bool {
 	return true
 }
 
+// addErrorToHistory 添加错误到历史记录
+func (r *Reconnector) addErrorToHistory(errorMsg string) {
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	entry := fmt.Sprintf("[%s] %s", timestamp, errorMsg)
+	
+	// 只保留最近的10条错误记录
+	if len(r.errorHistory) >= 10 {
+		r.errorHistory = r.errorHistory[1:]
+	}
+	r.errorHistory = append(r.errorHistory, entry)
+}
+
 // OnConnectionLost 连接丢失时的回调
 func (r *Reconnector) OnConnectionLost() {
 	r.mu.Lock()
 	r.isConnected = false
 	r.mu.Unlock()
 
-	log.Printf("Database connection lost, starting reconnection...")
+	logger := GetDatabaseLogger()
+	logger.Warn("❌ 数据库连接丢失，启动重连程序...")
 	r.StartReconnection()
 }
 

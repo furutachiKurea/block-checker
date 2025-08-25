@@ -56,10 +56,21 @@ func init() {
 
 // HomeData 主页数据
 type HomeData struct {
-	Status      string
-	StatusClass string
-	Timestamp   string
-	Error       string
+	Status       string
+	StatusClass  string
+	Timestamp    string
+	Error        string
+	ErrorDetails *ErrorDetails
+}
+
+type ErrorDetails struct {
+	Type       string `json:"type"`
+	Code       string `json:"code,omitempty"`
+	Message    string `json:"message"`
+	Cause      string `json:"cause,omitempty"`
+	Suggestion string `json:"suggestion,omitempty"`
+	Timestamp  string `json:"timestamp"`
+	RetryCount int    `json:"retry_count,omitempty"`
 }
 
 // ErrorData 错误页面数据
